@@ -651,6 +651,20 @@ const DB_NAME = 'gunter_db';
 const DB_VERSION = 1;
 const STORES = ['entries', 'errorlog', 'meta'];
 let db = null;
+const API_PROXY_URL = null; // Optional remote proxy endpoint. Set your proxy URL here if you want the app to call a backend instead of Anthropic directly.
+
+async function getRequestHeaders() {
+  const headers = { 'Content-Type': 'application/json' };
+  if (!state.apiProxyUrl && !API_PROXY_URL) {
+    const apiKey = await getApiKey();
+    headers.Authorization = `Bearer ${apiKey}`;
+  }
+  return headers;
+}
+
+function getApiEndpoint() {
+  return state.apiProxyUrl || API_PROXY_URL || 'https://api.anthropic.com/v1/messages';
+}
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -705,7 +719,8 @@ let state = {
   currentTarget: 100,
   sessionActive: false,
   todayEntry: '',
-  apiKey: null
+  apiKey: null,
+  apiProxyUrl: null
 };
 
 let entries = {};
@@ -720,6 +735,7 @@ async function loadAll() {
     state.levelScore = meta.levelScore ?? 50;
     state.currentTarget = meta.currentTarget ?? 100;
     state.apiKey = meta.apiKey ?? null;
+    state.apiProxyUrl = meta.apiProxyUrl ?? null;
   }
 }
 
@@ -737,7 +753,12 @@ async function saveErrorLog() {
 }
 
 async function saveMeta() {
-  await dbSet('meta', 'state', { levelScore: state.levelScore, currentTarget: state.currentTarget, apiKey: state.apiKey });
+  await dbSet('meta', 'state', {
+    levelScore: state.levelScore,
+    currentTarget: state.currentTarget,
+    apiKey: state.apiKey,
+    apiProxyUrl: state.apiProxyUrl
+  });
 }
 
 function showSaved() {
@@ -1106,13 +1127,9 @@ LEVEL-ANPASSUNG: Level-Score > 66 → härtere Folgefragen. < 33 → einfachere 
 HEUTE: ${weekdayDE()}, ${todayStr()}, KW ${weekNumber()}
 FEHLER-MUSTER: ${JSON.stringify(Object.keys(errorLog).slice(0,5))}`;
 
-  const apiKey = await getApiKey();
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetch(getApiEndpoint(), {
     method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
+    headers: await getRequestHeaders(),
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1000,
@@ -1138,13 +1155,9 @@ FEHLER-MUSTER: ${JSON.stringify(Object.keys(errorLog).slice(0,5))}`;
 async function requestTemplate() {
   showLoading();
   try {
-    const apiKey = await getApiKey();
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch(getApiEndpoint(), {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
+      headers: await getRequestHeaders(),
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 300,
@@ -1306,15 +1319,6 @@ document.getElementById('user-input').addEventListener('keydown', function(e) {
 
 // ─── Init ──────────────────────────────────────────────────────────
 async function init() {
-  // Check for API key in URL query parameter
-  const urlParams = new URLSearchParams(window.location.search);
-  const urlApiKey = urlParams.get('apikey');
-  if (urlApiKey && urlApiKey.length > 20) {
-    await setApiKey(urlApiKey);
-    // Clean up URL to remove query parameter
-    window.history.replaceState({}, document.title, window.location.pathname);
-  }
-
   const statusEl = document.getElementById('db-status');
   try {
     db = await openDB();
@@ -1327,14 +1331,32 @@ async function init() {
     statusEl.className = 'db-status error';
   }
 
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlApiKey = urlParams.get('apikey');
+  const urlProxy = urlParams.get('proxy');
+  let urlStateChanged = false;
+
+  if (urlProxy) {
+    state.apiProxyUrl = urlProxy;
+    urlStateChanged = true;
+  }
+  if (urlApiKey && urlApiKey.length > 20) {
+    state.apiKey = urlApiKey;
+    urlStateChanged = true;
+  }
+  if (urlStateChanged) {
+    await saveMeta();
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
   document.getElementById('header-date').innerHTML = `${weekdayDE()}<br>${todayStr()}`;
 
   const streak = calcStreak();
   const totalEntries = Object.keys(entries).length;
 
-  if (!state.apiKey) {
+  if (!state.apiKey && !state.apiProxyUrl && !API_PROXY_URL) {
     showApiKeyOverlay();
-    return; // Don't show welcome messages until API key is set
+    return; // Don't show welcome messages until API key or proxy is set
   }
 
   if (totalEntries === 0) {

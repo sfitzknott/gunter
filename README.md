@@ -46,6 +46,16 @@ The app will:
 
 Bookmark this URL for future visits. You only need to do this once.
 
+**Optional remote proxy**
+
+If you want the browser app to avoid storing the key entirely, you can route requests through a tiny remote proxy instead of calling Anthropic directly.
+
+```
+https://sfitzknott.github.io/gunter/?proxy=https://your-proxy.example.com/ai
+```
+
+This makes your static app use a backend service that holds the Anthropic key securely.
+
 **Option B: Manual Command**
 
 If you prefer not to use a URL parameter:
@@ -131,6 +141,25 @@ Your API key is:
 - ✓ Safe to use in a query parameter on your own device
 
 **Best practice:** Use the URL parameter method on **your own devices only**. Don't share the URL with the key in it publicly.
+
+### Optional remote proxy (minimal external system)
+
+If you prefer better separation of concerns and do not want the key to live in the browser at all, use a tiny proxy service for your Anthropic requests.
+
+The app can use a single remote endpoint:
+
+```
+https://sfitzknott.github.io/gunter/?proxy=https://your-proxy.example.com/ai
+```
+
+The proxy holds the Anthropic secret in its environment and forwards requests from the browser. This is the smallest additional system you need beyond GitHub Pages.
+
+Good choices for a simple proxy service:
+- **Cloudflare Workers** — one service, easy deploy, secret storage
+- **Vercel Functions** — one service, simple endpoint
+- **Netlify Functions** — one service, built-in secret management
+
+This keeps your browser app static and your secret server-side.
 
 ---
 
