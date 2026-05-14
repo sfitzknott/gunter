@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#1a1a2e"/>
+  <rect x="0" y="490" width="512" height="22" fill="#c41e3a"/>
+  <text x="256" y="320" font-family="Georgia, serif" font-size="260" font-weight="bold" fill="#f5f0e8" text-anchor="middle">G</text>
+  <text x="256" y="420" font-family="Georgia, serif" font-size="72" fill="#b8860b" text-anchor="middle" font-style="italic">ünter</text>
+</svg>
