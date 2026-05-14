@@ -1215,6 +1215,15 @@ document.getElementById('user-input').addEventListener('keydown', function(e) {
 
 // ─── Init ──────────────────────────────────────────────────────────
 async function init() {
+  // Check for API key in URL query parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlApiKey = urlParams.get('apikey');
+  if (urlApiKey && urlApiKey.length > 20) {
+    await setApiKey(urlApiKey);
+    // Clean up URL to remove query parameter
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
   const statusEl = document.getElementById('db-status');
   try {
     db = await openDB();
