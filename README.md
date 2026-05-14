@@ -71,6 +71,7 @@ Type `template` to get today's diary prompt. Write freely, and Günter will:
 
 | Command | What it does |
 |---|---|
+| `apikey [key]` | Save your Anthropic API key |
 | `template` | Generate today's structured diary prompt |
 | `goal [n]` | Set daily word target (100–1000) |
 | **Word Count** | — |
